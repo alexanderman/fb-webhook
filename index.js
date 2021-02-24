@@ -5,16 +5,19 @@ const
     express = require('express'),
     bodyParser = require('body-parser'),
     app = express().use(bodyParser.json()); // creates express http server
+const handlers = require('./handlers');
+const { handleMessage, handlePostback } = handlers;
+const VERIFY_TOKEN = "this_is_my_random_verify_token";
 
 // Sets server port and logs message on success
-app.listen(process.env.PORT || 1337, () => console.log('webhook is listening'));
+const port = 1337;
+app.listen(process.env.PORT || port, () => console.log('webhook is listening at ' + port));
 
 
 // Creates the endpoint for our webhook 
 app.post('/webhook', (req, res) => {
 
     let body = req.body;
-    console.log('webhook POST', req.body);
 
     // Checks this is an event from a page subscription
     if (body.object === 'page') {
@@ -25,7 +28,16 @@ app.post('/webhook', (req, res) => {
             // Gets the message. entry.messaging is an array, but 
             // will only ever contain one message, so we get index 0
             let webhook_event = entry.messaging[0];
-            console.log(webhook_event);
+            const sender_psid = webhook_event.sender.id;
+
+            // Check if the event is a message or postback and
+            // pass the event to the appropriate handler function
+            if (webhook_event.message) {
+                handleMessage(sender_psid, webhook_event.message);
+            } else if (webhook_event.postback) {
+                handlePostback(sender_psid, webhook_event.postback);
+            }
+
         });
 
         // Returns a '200 OK' response to all requests
@@ -41,9 +53,6 @@ app.post('/webhook', (req, res) => {
 
 // Adds support for GET requests to our webhook
 app.get('/webhook', (req, res) => {
-
-    // Your verify token. Should be a random string.
-    let VERIFY_TOKEN = "this_is_my_random_verify_token";
 
     // Parse the query params
     let mode = req.query['hub.mode'];
@@ -74,10 +83,10 @@ app.get('', (req, res) => {
     res.send('fb-webhook');
 });
 
-/** 
- * DreamTeam-page-test token, needed for sending messages, 
+/**
+ * DreamTeam-page-test token, needed for sending messages,
  * see section 3 at https://developers.facebook.com/docs/messenger-platform/getting-started/app-setup
  * EAAQa13AfiDwBAGWKkj4a7ZAcpdOv0xrLdvFdzQOyej1cgMnxLvG0z9csOAJ4fMSSkCKZC2Mj4STUniYfqz5hZBhXspCoxxYKlXUlnb3ywVCYgjR337pPv959AQaMk9vD5r0bdPWEmy4xNF5cvjIIg3hdY5JOdGuF9Q08DWbmgZDZD
- * 
- * 
+ *
+ *
  */
